@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma"
+import { GUEST_AUDIT, withGuestAudit } from "@/lib/task-audit"
 import { NextResponse } from "next/server"
-
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     orderBy: { createdOn: "desc" },
   })
 
-  return NextResponse.json(tasks)
+  return NextResponse.json(tasks.map((task) => withGuestAudit(task)))
 }
 
 export async function POST(req: Request) {
@@ -27,10 +27,7 @@ export async function POST(req: Request) {
   const task = await prisma.task.create({
     data: {
       ...body,
-      createdByName: "Prateek",
-      createdById: "1",
-      updatedByName: "Prateek",
-      updatedById: "1",
+      ...GUEST_AUDIT,
     },
   })
 

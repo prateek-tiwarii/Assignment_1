@@ -1,33 +1,52 @@
 import { prisma } from "@/lib/prisma"
+import { GUEST_UPDATED_AUDIT, withGuestAudit } from "@/lib/task-audit"
 import { NextResponse } from "next/server"
 
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
+
+async function resolveTaskId(context: RouteContext): Promise<string | null> {
+  const { id } = await context.params
+  return id?.trim() ? id : null
+}
+
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  _req: Request,
+  context: RouteContext
 ) {
+  const id = await resolveTaskId(context)
+  if (!id) {
+    return NextResponse.json({ error: "Task id is required" }, { status: 400 })
+  }
+
   const task = await prisma.task.findUnique({
-    where: { id: params.id },
+    where: { id },
   })
 
   if (!task) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 })
   }
 
-  return NextResponse.json(task)
+  return NextResponse.json(withGuestAudit(task))
 }
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
+  const id = await resolveTaskId(context)
+  if (!id) {
+    return NextResponse.json({ error: "Task id is required" }, { status: 400 })
+  }
+
   const body = await req.json()
 
   const updatedTask = await prisma.task.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       ...body,
-      updatedByName: "Prateek",
-      updatedById: "1",
+      ...GUEST_UPDATED_AUDIT,
     },
   })
 
@@ -35,11 +54,16 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
+  _req: Request,
+  context: RouteContext
 ) {
+  const id = await resolveTaskId(context)
+  if (!id) {
+    return NextResponse.json({ error: "Task id is required" }, { status: 400 })
+  }
+
   await prisma.task.delete({
-    where: { id: params.id },
+    where: { id },
   })
 
   return NextResponse.json({
