@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { FormEvent, useState } from "react"
+import { FormEvent, useState, useEffect } from "react"
+
 import {
   Select,
   SelectContent,
@@ -23,6 +24,8 @@ type CreateTaskForm = {
   dueDate: string
   status: TaskStatus
   remarks: string
+  assigneeId: string
+  projectId: string
 }
 
 export default function CreateTask() {
@@ -34,9 +37,29 @@ export default function CreateTask() {
     dueDate: "",
     status: "pending",
     remarks: "",
+    assigneeId: "",
+    projectId: "",
   })
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([])
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [usersRes, projectsRes] = await Promise.all([
+          fetch("/api/users"),
+          fetch("/api/projects"),
+        ])
+        if (usersRes.ok) setUsers(await usersRes.json())
+        if (projectsRes.ok) setProjects(await projectsRes.json())
+      } catch (err) {
+        console.error("Failed to fetch users or projects", err)
+      }
+    }
+    fetchData()
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -51,6 +74,8 @@ export default function CreateTask() {
         dueDate: toApiDueDate(form.dueDate),
         status: form.status,
         remarks: form.remarks.trim() || null,
+        assigneeId: form.assigneeId || null,
+        projectId: form.projectId || null,
       })
 
       router.push("/task")
@@ -61,6 +86,7 @@ export default function CreateTask() {
       setIsSubmitting(false)
     }
   }
+
 
   return (
     <section className="min-h-[calc(100vh-64px)] bg-[linear-gradient(180deg,#f8f6ef_0%,#eeeff3_100%)] px-4 py-10 sm:px-6">
@@ -119,6 +145,37 @@ export default function CreateTask() {
                   <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Select
+                  value={form.assigneeId}
+                  onValueChange={(value) => setForm((current) => ({ ...current, assigneeId: value }))}
+                >
+                  <SelectTrigger className="h-11 w-full rounded-xl border-black/10">
+                    <SelectValue placeholder="Assign To" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={form.projectId}
+                  onValueChange={(value) => setForm((current) => ({ ...current, projectId: value }))}
+                >
+                  <SelectTrigger className="h-11 w-full rounded-xl border-black/10">
+                    <SelectValue placeholder="Select Project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
 
               <Textarea
                 placeholder="Remarks (optional)"

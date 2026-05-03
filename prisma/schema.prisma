@@ -1,15 +1,65 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(USER)
+  
+  // Relationships
+  createdTasks  Task[]    @relation("TaskCreator")
+  assignedTasks Task[]    @relation("TaskAssignee")
+  updatedTasks  Task[]    @relation("TaskUpdater")
+  
+  ownedProjects Project[] @relation("ProjectOwner")
+  memberTeams   Team[]    @relation("TeamMembers")
+  managedTeams  Team[]    @relation("TeamManager")
+
+  createdOn     DateTime  @default(now())
+  updatedOn     DateTime  @updatedAt
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  
+  ownerId     String
+  owner       User     @relation("ProjectOwner", fields: [ownerId], references: [id])
+  
+  tasks       Task[]
+  teams       Team[]
+
+  createdOn   DateTime @default(now())
+  updatedOn   DateTime @updatedAt
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  
+  managerId   String
+  manager     User     @relation("TeamManager", fields: [managerId], references: [id])
+  
+  members     User[]   @relation("TeamMembers")
+  projects    Project[]
+
+  createdOn   DateTime @default(now())
+  updatedOn   DateTime @updatedAt
 }
 
 model Task {
@@ -17,15 +67,22 @@ model Task {
   title       String
   description String
   dueDate     DateTime
-  status      String
+  status      String   @default("pending")
   remarks     String?
 
-  createdOn DateTime @default(now())
-  updatedOn DateTime @updatedAt
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
 
-  createdByName String
-  createdById   String
+  creatorId   String
+  creator     User     @relation("TaskCreator", fields: [creatorId], references: [id])
+  
+  assigneeId  String?
+  assignee    User?    @relation("TaskAssignee", fields: [assigneeId], references: [id])
 
-  updatedByName String
-  updatedById   String
+  updaterId   String?
+  updater     User?    @relation("TaskUpdater", fields: [updaterId], references: [id])
+
+  createdOn   DateTime @default(now())
+  updatedOn   DateTime @updatedAt
 }
+

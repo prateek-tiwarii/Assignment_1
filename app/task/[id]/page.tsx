@@ -31,6 +31,8 @@ type EditTaskForm = {
   dueDate: string
   status: TaskStatus
   remarks: string
+  assigneeId: string
+  projectId: string
 }
 
 export default function EditTask() {
@@ -44,12 +46,32 @@ export default function EditTask() {
     dueDate: "",
     status: "pending",
     remarks: "",
+    assigneeId: "",
+    projectId: "",
   })
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([])
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [auditInfo, setAuditInfo] = useState<Pick<Task, "createdByName" | "createdById" | "updatedByName" | "updatedById"> | null>(null)
+  const [auditInfo, setAuditInfo] = useState<{ creatorName?: string; assigneeName?: string } | null>(null)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [usersRes, projectsRes] = await Promise.all([
+          fetch("/api/users"),
+          fetch("/api/projects"),
+        ])
+        if (usersRes.ok) setUsers(await usersRes.json())
+        if (projectsRes.ok) setProjects(await projectsRes.json())
+      } catch (err) {
+        console.error("Failed to fetch users or projects", err)
+      }
+    }
+    fetchData()
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -67,12 +89,12 @@ export default function EditTask() {
             dueDate: toInputDate(task.dueDate),
             status: task.status,
             remarks: task.remarks ?? "",
+            assigneeId: task.assigneeId ?? "",
+            projectId: task.projectId ?? "",
           })
           setAuditInfo({
-            createdByName: task.createdByName,
-            createdById: task.createdById,
-            updatedByName: task.updatedByName,
-            updatedById: task.updatedById,
+            creatorName: task.creatorName,
+            assigneeName: task.assigneeName,
           })
         }
       } catch (requestError) {
@@ -106,6 +128,8 @@ export default function EditTask() {
         dueDate: toApiDueDate(form.dueDate),
         status: form.status,
         remarks: form.remarks.trim() || null,
+        assigneeId: form.assigneeId || null,
+        projectId: form.projectId || null,
       })
 
       router.push("/task")
@@ -116,6 +140,7 @@ export default function EditTask() {
       setIsSubmitting(false)
     }
   }
+
 
   async function handleDelete() {
     const confirmed = window.confirm("Delete this task? This action cannot be undone.")
@@ -160,10 +185,11 @@ export default function EditTask() {
               <form className="space-y-4" onSubmit={handleUpdate}>
                 {auditInfo ? (
                   <div className="rounded-xl border border-black/10 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
-                    <p>Created By: {auditInfo.createdByName} ({auditInfo.createdById})</p>
-                    <p className="mt-1">Last Updated By: {auditInfo.updatedByName} ({auditInfo.updatedById})</p>
+                    <p>Created By: {auditInfo.creatorName}</p>
+                    {auditInfo.assigneeName && <p className="mt-1">Assigned To: {auditInfo.assigneeName}</p>}
                   </div>
                 ) : null}
+
 
                 <Input
                   placeholder="Task Title"
@@ -203,6 +229,37 @@ export default function EditTask() {
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    value={form.assigneeId}
+                    onValueChange={(value) => setForm((current) => ({ ...current, assigneeId: value }))}
+                  >
+                    <SelectTrigger className="h-11 w-full rounded-xl border-black/10">
+                      <SelectValue placeholder="Assign To" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={form.projectId}
+                    onValueChange={(value) => setForm((current) => ({ ...current, projectId: value }))}
+                  >
+                    <SelectTrigger className="h-11 w-full rounded-xl border-black/10">
+                      <SelectValue placeholder="Select Project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
 
                 <Textarea
                   placeholder="Remarks"

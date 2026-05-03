@@ -9,10 +9,13 @@ export type Task = {
   remarks: string | null
   createdOn: string
   updatedOn: string
-  createdByName: string
-  createdById: string
-  updatedByName: string
-  updatedById: string
+  projectId: string | null
+  creatorId: string
+  assigneeId: string | null
+  updaterId: string | null
+  // We can also include names for display if the API returns them joined
+  creatorName?: string
+  assigneeName?: string
 }
 
 export type TaskInput = {
@@ -21,7 +24,10 @@ export type TaskInput = {
   dueDate: string
   status: TaskStatus
   remarks?: string | null
+  projectId?: string | null
+  assigneeId?: string | null
 }
+
 
 const TASK_API_BASE = "/api/task"
 

@@ -186,16 +186,24 @@ export default function TasksPage() {
               <CardContent className="space-y-4">
                 <p className="line-clamp-2 text-sm text-neutral-600">{task.description}</p>
 
-                <p className="text-xs text-neutral-500">Due: {formatDate(task.dueDate)}</p>
-
-                <div className="space-y-1 text-xs text-neutral-500">
-                  <p>
-                    Created By: {task.createdByName} ({task.createdById})
-                  </p>
-                  <p>
-                    Last Updated By: {task.updatedByName} ({task.updatedById})
-                  </p>
+                <div className="flex flex-wrap gap-2">
+                  <p className="text-xs text-neutral-500">Due: {formatDate(task.dueDate)}</p>
+                  {task.assigneeName && (
+                    <Badge variant="outline" className="text-[10px] uppercase font-normal py-0">Assignee: {task.assigneeName}</Badge>
+                  )}
                 </div>
+
+                <div className="space-y-1 text-xs text-neutral-500 border-t border-black/5 pt-3">
+                  <p>
+                    Created By: {task.creatorName}
+                  </p>
+                  {task.assigneeName && (
+                    <p>
+                      Assigned To: {task.assigneeName}
+                    </p>
+                  )}
+                </div>
+
 
                 <div className="flex gap-2 pt-2">
                   <Button size="sm" variant="outline" asChild className="rounded-full">
